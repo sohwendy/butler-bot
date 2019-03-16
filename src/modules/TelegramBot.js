@@ -250,17 +250,13 @@ function checkUserBookings(message, searchQuery, NoBookingReplyText, isDelete) {
 				return;
 			}
 
-			let count = 0;
-			let msg = '';
-			for (let key in bookings) {
-				count++;
-				let booking = bookings[key];
-				msg += '-------------------------------\n';
+			const bookingInfo = bookings.map((booking, index) => {
+				let msg = '-------------------------------\n';
 				// console.log(booking.summary);
 				let details = booking.summary.split(' by ');
 				let recur = booking.recurrent === undefined ? '' : booking.recurrent;
 				console.log(recur);
-				msg += ReplyBuilder.checkBookings(count, details[0] + recur, booking.location, booking.start.dateTime, booking.end.dateTime, details[1]);
+				msg += ReplyBuilder.checkBookings(index+1, details[0] + recur, booking.location, booking.start.dateTime, booking.end.dateTime, details[1]);
 				if (undefined !== isDelete) {
 					if (!booking.isByMe) {
 						msg += MESSAGES.notBookedByMe;
@@ -273,10 +269,19 @@ function checkUserBookings(message, searchQuery, NoBookingReplyText, isDelete) {
 						msg += `${MESSAGES.deleteInstruction}/\deleteBooking${booking.room}${room2Id}@${booking.id}\n`;
 					}
 				}
-				msg = msg.replace('_', '-'); // escape _ cuz markdown cant handle it
-			}
-			let reply = MESSAGES.listBooking + msg;
-			slimbot.sendMessage(message.chat.id, reply, { parse_mode: 'Markdown' });
+				return msg.replace('_', '-'); // escape _ cuz markdown cant handle it
+			});
+
+			const bookingGroup = bookingInfo.reduce((groups, booking, index) => {
+				let groupIndex = Math.round(index / 20);
+                groups[groupIndex] = groups[groupIndex] ? booking : groups[groupIndex] + booking;
+                return groups;
+			}, []);
+
+			bookingGroup.forEach((group) => {
+                const reply = MESSAGES.listBooking + group;
+                slimbot.sendMessage(message.chat.id, reply, { parse_mode: 'Markdown' });
+            });
 		});
 }
 
